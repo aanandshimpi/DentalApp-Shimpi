@@ -1,0 +1,170 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  DENTIST
+  RECEPTIONIST
+  ASSISTANT
+  ADMIN
+}
+
+enum AppointmentStatus {
+  SCHEDULED
+  WAITING
+  IN_VISIT
+  SEEN
+}
+
+model Clinic {
+  id          String @id @default(uuid()) @db.Uuid
+  slug        String @unique
+  name        String
+  timezone    String @default("Asia/Kolkata")
+  currency    String @default("INR")
+  createdAt   DateTime @default(now()) @db.Timestamptz
+  users       User[]
+  patients    Patient[]
+  chairs      Chair[]
+  dashboard   DashboardSnapshot?
+}
+
+model User {
+  id           String @id @default(uuid()) @db.Uuid
+  clinicId     String @db.Uuid
+  clinic       Clinic @relation(fields: [clinicId], references: [id])
+  email        String
+  name         String
+  passwordHash String
+  active       Boolean @default(true)
+  createdAt    DateTime @default(now()) @db.Timestamptz
+  roles        UserRole[]
+  sessions     Session[]
+  doctor       Doctor?
+  audit        AuditLog[]
+
+  @@unique([clinicId, email])
+  @@unique([clinicId, id])
+}
+
+model UserRole {
+  clinicId String @db.Uuid
+  userId   String @db.Uuid
+  role     Role
+  user     User @relation(fields: [clinicId, userId], references: [clinicId, id], onDelete: Cascade)
+
+  @@id([clinicId, userId, role])
+}
+
+model Session {
+  tokenHash String @id
+  clinicId  String @db.Uuid
+  userId    String @db.Uuid
+  expiresAt DateTime @db.Timestamptz
+  user      User @relation(fields: [clinicId, userId], references: [clinicId, id], onDelete: Cascade)
+
+  @@index([clinicId, userId])
+  @@index([expiresAt])
+}
+
+model LoginThrottle {
+  key       String @id
+  attempts  Int
+  expiresAt DateTime @db.Timestamptz
+
+  @@index([expiresAt])
+}
+
+model Doctor {
+  id           String @id @default(uuid()) @db.Uuid
+  clinicId     String @db.Uuid
+  userId       String @db.Uuid
+  registration String?
+  active       Boolean @default(true)
+  user         User @relation(fields: [clinicId, userId], references: [clinicId, id])
+  appointments Appointment[]
+
+  @@unique([clinicId, userId])
+  @@unique([clinicId, id])
+}
+
+model Patient {
+  id           String @id @default(uuid()) @db.Uuid
+  clinicId     String @db.Uuid
+  clinic       Clinic @relation(fields: [clinicId], references: [id])
+  number       String
+  name         String
+  phone        String?
+  createdAt    DateTime @default(now()) @db.Timestamptz
+  archivedAt   DateTime? @db.Timestamptz
+  appointments Appointment[]
+
+  @@unique([clinicId, number])
+  @@unique([clinicId, id])
+}
+
+model Chair {
+  id           String @id @default(uuid()) @db.Uuid
+  clinicId     String @db.Uuid
+  clinic       Clinic @relation(fields: [clinicId], references: [id])
+  name         String
+  appointments Appointment[]
+
+  @@unique([clinicId, name])
+  @@unique([clinicId, id])
+}
+
+model Appointment {
+  id        String @id @default(uuid()) @db.Uuid
+  clinicId  String @db.Uuid
+  patientId String @db.Uuid
+  doctorId  String @db.Uuid
+  chairId   String? @db.Uuid
+  patient   Patient @relation(fields: [clinicId, patientId], references: [clinicId, id])
+  doctor    Doctor @relation(fields: [clinicId, doctorId], references: [clinicId, id])
+  chair     Chair? @relation(fields: [clinicId, chairId], references: [clinicId, id])
+  startsAt  DateTime @db.Timestamptz
+  endsAt    DateTime @db.Timestamptz
+  status    AppointmentStatus
+  reason    String
+
+  @@index([clinicId, startsAt])
+  @@index([clinicId, doctorId, startsAt])
+  @@index([clinicId, chairId, startsAt])
+}
+
+model DashboardSnapshot {
+  clinicId          String @id @db.Uuid
+  clinic            Clinic @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  day               DateTime @db.Date
+  diagnostic        Int
+  inTreatment       Int
+  awaitingLab       Int
+  completed         Int
+  collections       Decimal @db.Decimal(12, 2)
+  invoiceCount      Int
+  followUps         Int
+  incompleteRecords Int
+  outstanding       Int
+}
+
+enum AuditAction {
+  SIGN_IN
+  SIGN_OUT
+}
+
+model AuditLog {
+  id        String @id @default(uuid()) @db.Uuid
+  clinicId  String @db.Uuid
+  actorId   String @db.Uuid
+  actor     User @relation(fields: [clinicId, actorId], references: [clinicId, id])
+  action    AuditAction
+  createdAt DateTime @default(now()) @db.Timestamptz
+
+  @@index([clinicId, createdAt])
+}
