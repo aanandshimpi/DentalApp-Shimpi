@@ -1,4 +1,4 @@
-# DentalCare Pro
+# SHIMPI DENTAL CLINIC
 
 Milestone 1 is a local, online-only foundation for a dental clinic workspace. The dashboard follows the approved concept with a desktop sidebar, responsive navigation, appointment metrics, schedule search and doctor filtering, chair status, treatment pipeline, quick actions, clinic alerts and doctor workloads. The preview uses two fictional clinics and a fixed clinic day of 22 November 2026.
 
@@ -27,6 +27,44 @@ Open [the local dashboard](http://localhost:3000/dashboard). Select **Fill denti
 | `cedar-smile` | `reception@cedar-smile.example` | Receptionist at the second clinic |
 
 All demo accounts use `FictionalClinic2026!`. Seeding is repeatable and refreshes passwords for seeded accounts. Use a dedicated local demo database. The `.example` emails are fictional.
+
+### Patient directory
+
+Open **Patients** to search active records in your clinic by name, patient number, or phone. Dentists and receptionists can register a patient from the directory or the dashboard’s **New Patient** action. Enter a clinic-unique patient number and the patient’s name. Phone is optional.
+
+### Patient care record
+
+Open a patient from **Patients**, either schedule, or after registration. Use the history picker to open a checkup, then switch between its findings and treatment plans. If a checkup has several plans, select one to see its tooth-level details and progress board. Use **New Checkup** to record findings, then **Plan treatment** on the checkup to select the teeth that will receive treatment. You can use the teeth recorded at the checkup as a starting point. Each tooth has its own illustrated treatment card and moves between the **Planned**, **In progress**, and **Done** columns. Plans without a selected tooth track progress at the plan level. You can document findings and procedures for multiple teeth in the tooth chart. Plans created without a consultation appear below the consultations.
+
+### Appointment scheduling
+
+Use **New Appointment** on the dashboard or open **Appointments** to view a schedule by date. Dentists, receptionists, and clinic admins can book with an active patient and doctor, an optional chair, and a start time in the clinic’s time zone. The scheduler rejects overlapping visits for the same patient, doctor, or assigned chair. After booking, the schedule opens on the selected date.
+
+From the daily schedule, select **Manage** on a scheduled visit to change its time, doctor, or chair, or cancel it. Cancelled visits stay visible in the daily schedule and free the slot for another booking.
+
+The demo dashboard continues to show 22 November 2026. **Appointments** can show any selected date.
+
+Use the **Calendar** tab for a month view. Select a date to see its schedule, or filter the daily list by status. Staff can move an appointment through **Pending**, **Checked in**, **In progress**, and **Done** using the action on its row.
+
+### Consultations
+
+Dentists can start a consultation from **New Consultation** on the dashboard or from a visit in either schedule. Every consultation belongs to a patient. A dentist can link one consultation to each appointment or record a visit without an appointment. Open **Consultations** for clinic history or open a patient record for their full care history. Clinical notes are visible to roles with clinical access.
+
+### Treatment plans
+
+Dentists can start a plan from **Create Treatment Plan** on the dashboard or from a consultation. Each plan can include general treatment notes, follow-up instructions, and details for individual teeth. Select permanent or primary teeth on the 3D FDI chart. Open a tooth to rotate its model and record surfaces, examination findings, diagnosis, and a specialty procedure or other suggested treatment. If a consultation is linked, it must belong to the same patient. Use **Treatment Plans** in the sidebar for clinic history, the patient directory for a patient’s plans, or a consultation to view its linked plans.
+
+### Specialty forms
+
+Consultations and treatment plans offer templates for general dentistry, endodontics, periodontics, orthodontics, prosthodontics, pediatric dentistry, and oral and maxillofacial surgery. Select a specialty to see its findings or planning fields and record the options discussed or planned. Use the tooth chart for tooth-specific findings in consultations and procedures or notes in treatment plans.
+
+Starting a treatment plan from a consultation preselects its specialty and lets you select the teeth recorded in that consultation. The clinician records the findings and selects the procedures.
+
+### Hosted demo
+
+`render.yaml` defines a free Node web service for deployment from GitHub. Connect the repository to a Render Blueprint and set its `DATABASE_URL` to the direct connection string from a new, dedicated Neon Free database. Render generates `HOSTED_DEMO_PASSWORD` for the demo accounts. Use the clinic codes and demo emails listed above with that password, and share it privately with demo participants.
+
+The build applies migrations and initializes fictional fixtures on the first deployment. Later builds preserve the hosted records. The demo uses its own database, and everyone testing it should enter fictional information. Keep the generated password and database connection string in Render’s environment settings.
 
 ### Environment
 
@@ -61,7 +99,7 @@ The browser tests cover authentication, sign-out, schedule filters, mobile navig
 
 ## Milestone limits
 
-Later module links and creation actions are visible where the role allows them and are disabled in Milestone 1. The fixed-day preview assumes Asia/Kolkata. Appointment creation and overlap rules, live clinical and financial records, staff administration and other workflows follow in later milestones.
+Billing and the other future modules appear in navigation where the role allows them. The fixed-day preview assumes Asia/Kolkata. Live clinical and financial records, staff administration and other workflows follow in later milestones.
 
 This is a single-workspace staff login per account and a fictional local demo. Before clinic use, privileged MFA, account provisioning and recovery, edge-level rate limits, session/throttle cleanup, deployment security, backups and restore, retention policy, and clinical and regulatory review require completion. Keep patient data fictional. Open decisions include connectivity and offline needs, clinic branding and staff roles, appointment durations, pricing, chair count, and hosting and retention.
 

@@ -1,8 +1,14 @@
+import { clinicBrand } from "../lib/brand";
 import { db } from "../lib/db";
 import { hashPassword } from "../lib/password";
 import type { AppointmentStatus, Role } from "../generated/prisma/enums";
 
-const demoPassword = "FictionalClinic2026!";
+const localDemoPassword = "FictionalClinic2026!";
+const hosted = process.argv.includes("--hosted");
+const hostedClinicIds = {
+  "bright-smile": "b1dffea2-0c12-48db-831f-105b8159176f",
+  "cedar-smile": "e73a52a6-5af8-4b80-9a85-058dd4eb6591",
+} as const;
 const date = "2026-11-22";
 const day = new Date(`${date}T00:00:00Z`);
 const staff: [string, string, Role[]][] = [
@@ -22,14 +28,32 @@ const visits: [string, string, string, AppointmentStatus, number, number][] = [
 ];
 
 async function seed() {
-  if (process.env.DEMO_SEED !== "1") throw new Error("Set DEMO_SEED=1 for a dedicated local demo database.");
-  const passwordHash = await hashPassword(demoPassword);
-  await db.$transaction(async (tx) => {
+  const password = hosted ? (process.env.HOSTED_DEMO_PASSWORD ?? "") : localDemoPassword;
+  if (hosted) {
+    if (password.length < 20 || password.length > 128 || password === localDemoPassword) {
+      throw new Error("Set HOSTED_DEMO_PASSWORD to a separate demo password between 20 and 128 characters.");
+    }
+  } else if (process.env.DEMO_SEED !== "1" || process.env.HOSTED_DEMO === "1") {
+    throw new Error("Use DEMO_SEED=1 only for a dedicated local demo database.");
+  }
+  const passwordHash = await hashPassword(password);
+  const seeded = await db.$transaction(async (tx) => {
+    if (hosted) {
+      await tx.$queryRaw`SELECT 1 FROM pg_advisory_xact_lock(hashtextextended('shimpi-hosted-demo-seed', 0))`;
+      const clinics = await tx.clinic.findMany({ select: { id: true, slug: true } });
+      if (clinics.length) {
+        if (clinics.length === 2 && clinics.every(({ id, slug }) =>
+          hostedClinicIds[slug as keyof typeof hostedClinicIds] === id)) return false;
+        throw new Error("The hosted demo must use an empty database dedicated to fictional records.");
+      }
+    }
     for (const [index, slug, name] of [
-      [1, "bright-smile", "Bright Smile Dental Clinic"],
+      [1, "bright-smile", clinicBrand.name],
       [2, "cedar-smile", "Cedar Smile Dental Studio"],
     ] as const) {
-      const clinic = await tx.clinic.upsert({ where: { slug }, update: { name }, create: { slug, name } });
+      const clinic = await tx.clinic.upsert({
+        where: { slug }, update: { name }, create: { slug, name, id: hosted ? hostedClinicIds[slug] : undefined },
+      });
       const clinicId = clinic.id;
       const doctors: string[] = [];
       for (const [account, staffName, roles] of staff) {
@@ -76,10 +100,12 @@ async function seed() {
       };
       await tx.dashboardSnapshot.upsert({ where: { clinicId }, create: { clinicId, ...snapshot }, update: snapshot });
     }
+    return true;
   });
+  console.log(seeded ? "Seeded the Shimpi and Cedar Smile demo workspaces." : "Hosted demo fixtures are already initialized.");
 }
 
-seed().then(() => console.log("Seeded Bright Smile and Cedar Smile fictional clinics.")).catch((error) => {
+seed().catch((error) => {
   console.error(error);
   process.exitCode = 1;
 }).finally(() => db.$disconnect());
