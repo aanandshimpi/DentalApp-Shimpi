@@ -19,6 +19,7 @@ enum AppointmentStatus {
   WAITING
   IN_VISIT
   SEEN
+  CANCELLED
 }
 
 model Clinic {
@@ -47,6 +48,8 @@ model User {
   sessions     Session[]
   doctor       Doctor?
   audit        AuditLog[]
+  consultations Consultation[]
+  treatmentPlans TreatmentPlan[]
 
   @@unique([clinicId, email])
   @@unique([clinicId, id])
@@ -103,6 +106,8 @@ model Patient {
   createdAt    DateTime @default(now()) @db.Timestamptz
   archivedAt   DateTime? @db.Timestamptz
   appointments Appointment[]
+  consultations Consultation[]
+  treatmentPlans TreatmentPlan[]
 
   @@unique([clinicId, number])
   @@unique([clinicId, id])
@@ -132,10 +137,91 @@ model Appointment {
   endsAt    DateTime @db.Timestamptz
   status    AppointmentStatus
   reason    String
+  revision  Int @default(0)
+  consultation Consultation?
 
+  @@unique([clinicId, id, patientId])
   @@index([clinicId, startsAt])
   @@index([clinicId, doctorId, startsAt])
   @@index([clinicId, chairId, startsAt])
+}
+
+model Consultation {
+  id            String @id @default(uuid()) @db.Uuid
+  clinicId      String @db.Uuid
+  patientId     String @db.Uuid
+  appointmentId String? @db.Uuid
+  authorId      String @db.Uuid
+  patient       Patient @relation(fields: [clinicId, patientId], references: [clinicId, id])
+  appointment   Appointment? @relation(fields: [clinicId, appointmentId, patientId], references: [clinicId, id, patientId], onDelete: Restrict)
+  author        User @relation(fields: [clinicId, authorId], references: [clinicId, id])
+  concern       String
+  findings      String
+  assessment    String?
+  plan          String?
+  specialtyData Json?
+  teeth         ConsultationTooth[]
+  createdAt     DateTime @default(now()) @db.Timestamptz
+
+  treatmentPlans TreatmentPlan[]
+
+  @@unique([clinicId, id, patientId])
+  @@unique([clinicId, appointmentId, patientId])
+  @@index([clinicId, createdAt])
+  @@index([clinicId, patientId, createdAt])
+}
+
+model ConsultationTooth {
+  consultationId String @db.Uuid
+  tooth          String @db.VarChar(2)
+  details        String
+  diagnosis      String?
+  surfaces       String[] @default([])
+  consultation   Consultation @relation(fields: [consultationId], references: [id], onDelete: Cascade)
+
+  @@id([consultationId, tooth])
+}
+
+enum TreatmentStatus {
+  PLANNED
+  IN_PROGRESS
+  DONE
+}
+
+model TreatmentPlan {
+  id             String @id @default(uuid()) @db.Uuid
+  clinicId       String @db.Uuid
+  patientId      String @db.Uuid
+  consultationId String? @db.Uuid
+  authorId       String @db.Uuid
+  patient        Patient @relation(fields: [clinicId, patientId], references: [clinicId, id])
+  consultation   Consultation? @relation(fields: [clinicId, consultationId, patientId], references: [clinicId, id, patientId], onDelete: Restrict)
+  author         User @relation(fields: [clinicId, authorId], references: [clinicId, id])
+  title          String
+  treatment      String
+  followUp       String?
+  specialtyData  Json?
+  status         TreatmentStatus @default(PLANNED)
+  teeth          TreatmentPlanTooth[]
+  createdAt      DateTime @default(now()) @db.Timestamptz
+
+  @@index([clinicId, createdAt])
+  @@index([clinicId, patientId, createdAt])
+  @@index([clinicId, consultationId, createdAt])
+}
+
+model TreatmentPlanTooth {
+  planId  String @db.Uuid
+  tooth   String @db.VarChar(2)
+  details String
+  procedure String?
+  diagnosis String?
+  suggestedTreatment String?
+  status TreatmentStatus @default(PLANNED)
+  surfaces String[] @default([])
+  plan    TreatmentPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@id([planId, tooth])
 }
 
 model DashboardSnapshot {

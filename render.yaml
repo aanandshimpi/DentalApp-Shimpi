@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: shimpi-dental-clinic-demo
+    runtime: node
+    plan: free
+    buildCommand: npm ci --include=dev && npm run build && npm run db:migrate && npm run db:seed:hosted
+    startCommand: npm start -- --hostname 0.0.0.0
+    healthCheckPath: /login
+    envVars:
+      - key: NODE_VERSION
+        value: 24.22.1
+      - key: HOSTED_DEMO
+        value: "1"
+      - key: DATABASE_URL
+        sync: false
+      - key: HOSTED_DEMO_PASSWORD
+        generateValue: true

@@ -18,3 +18,10 @@ export const roleLabels: Record<Role, string> = {
 export function can(roles: readonly Role[], permission: Permission) {
   return roles.some((role) => grants[role].includes(permission));
 }
+
+export const modulePermissions: [Permission, string][] = [
+  ["appointment.manage", "Appointments"], ["patient.read", "Patients"], ["encounter.create", "Consultations"],
+  ["treatment.manage", "Treatment Plans"], ["finance.read", "Billing & Payments"],
+  ["document.read", "Documents & Imaging"], ["reports.read", "Reports"],
+  ["user.manage", "Doctors & Staff"], ["user.manage", "Settings"],
+];

@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
+import { clinicBrand } from "@/lib/brand";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "DentalCare Pro",
-  description: "Dental clinic management workspace",
+  title: clinicBrand.name,
+  description: "Staff workspace for Shimpi Dental Clinic, Solapur.",
   robots: { index: false, follow: false },
 };
 

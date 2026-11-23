@@ -1,3 +1,4 @@
+import { appointmentDayBounds, clinicToday } from "./appointments";
 import { db } from "./db";
 import { can } from "./permissions";
 import type { Viewer } from "./session";
@@ -17,15 +18,14 @@ export async function readDashboard(viewer: Viewer) {
     },
   });
 
+  const day = snapshot?.day ?? new Date(`${clinicToday(viewer.clinic.timezone)}T00:00:00Z`);
+  const { start, end } = await appointmentDayBounds(day.toISOString().slice(0, 10), viewer.clinic.timezone);
   const [appointments, chairs, doctors] = await Promise.all([
-    snapshot ? db.appointment.findMany({
+    db.appointment.findMany({
       where: {
         clinicId,
-        // The fictional preview runs on a fixed Asia/Kolkata clinic day.
-        startsAt: {
-          gte: new Date(snapshot.day.getTime() - 330 * 60_000),
-          lt: new Date(snapshot.day.getTime() + (1440 - 330) * 60_000),
-        },
+        startsAt: { gte: start, lt: end },
+        status: { not: "CANCELLED" },
         patient: { archivedAt: null },
       },
       orderBy: { startsAt: "asc" },
@@ -34,7 +34,7 @@ export async function readDashboard(viewer: Viewer) {
         patient: { select: { id: true, name: true } }, chairId: true, doctorId: true,
         doctor: { select: { user: { select: { name: true } } } },
       },
-    }) : [],
+    }),
     db.chair.findMany({ where: { clinicId }, select: { id: true, name: true }, orderBy: { name: "asc" } }),
     db.doctor.findMany({
       where: { clinicId, active: true, user: { active: true } },
@@ -44,7 +44,7 @@ export async function readDashboard(viewer: Viewer) {
   ]);
 
   return {
-    day: snapshot?.day ?? null, appointments, chairs, doctors,
+    day, appointments, chairs, doctors,
     followUps: snapshot?.followUps ?? 0,
     pipeline: clinical ? [
       snapshot?.diagnostic ?? 0, snapshot?.inTreatment ?? 0,

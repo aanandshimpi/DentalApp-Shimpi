@@ -1,0 +1,2 @@
+ALTER TYPE "AppointmentStatus" ADD VALUE 'CANCELLED';
+ALTER TABLE "Appointment" ADD COLUMN "revision" INTEGER NOT NULL DEFAULT 0;
